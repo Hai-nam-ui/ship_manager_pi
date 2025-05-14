@@ -1,0 +1,50 @@
+name: Build Ship Manager Plugin
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        choco install cmake git -y
+        choco install mingw --version=8.1.0
+        $env:Path += ";C:\Program Files\CMake\bin;C:\ProgramData\MinGW\bin"
+        git clone https://github.com/OpenCPN/OpenCPN.git opencpn
+
+    - name: Download and build wxWidgets
+      run: |
+        Invoke-WebRequest -Uri https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.5/wxWidgets-3.2.5.zip -OutFile wxWidgets.zip
+        Expand-Archive wxWidgets.zip -DestinationPath .
+        cd wxWidgets-3.2.5\build\msw
+        mingw32-make -f makefile.gcc BUILD=release SHARED=0
+        $env:WXWIN = "C:\Users\runneradmin\wxWidgets-3.2.5"
+        cd ../../..
+
+    - name: Build OpenCPN and plugin
+      run: |
+        cd opencpn
+        mkdir build
+        cd build
+        cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+        mingw32-make
+        cd ../../ship_manager_pi
+        mkdir build
+        cd build
+        cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+        mingw32-make
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ship_manager_pi_dll
+        path: ship_manager_pi/build/ship_manager_pi.dll
