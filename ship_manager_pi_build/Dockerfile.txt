@@ -1,0 +1,19 @@
+FROM mingw-w64:latest
+
+RUN apt-get update && apt-get install -y \
+    git \
+    cmake \
+    build-essential \
+    libwxgtk3.2-dev \
+    mingw-w64 \
+    && apt-get clean
+
+WORKDIR /opencpn
+RUN git clone https://github.com/OpenCPN/OpenCPN.git .
+
+WORKDIR /opencpn/plugins/ship_manager_pi
+COPY src/ .
+
+RUN mkdir build && cd build && \
+    cmake -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=/usr/share/mingw-w64/toolchain-x86_64-w64-mingw32.cmake .. && \
+    make
